@@ -1,4 +1,3 @@
-```markdown
 # IR_temperature — Quick Start
 
 A tiny, beginner-friendly Arduino project to read non-contact temperature from an IR sensor and print it (optionally serve a simple web UI on ESP boards).
@@ -52,4 +51,3 @@ Maintainer
 - jemmy1794
 
 Want this updated with exact wiring, libs and Serial example output for your specific sensor + board? Tell me the sensor model and board and I’ll patch the README.
-```
