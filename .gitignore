@@ -1,0 +1,17 @@
+# Node modules
+node_modules/
+
+# Tailwind build output
+#data/tailwind.min.css
+
+# Arduino暫存檔
+*.elf
+*.bin
+*.hex
+
+# 系統檔
+.DS_Store
+Thumbs.db
+
+# npm log
+npm-debug.log*

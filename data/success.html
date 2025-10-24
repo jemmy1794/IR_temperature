@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>儲存成功</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #eff6ff;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background-color: #fff;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .check {
+      font-size: 4rem;
+      color: #22c55e;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      color: #4b5563;
+      margin-bottom: 1rem;
+    }
+
+    .info-box {
+      background-color: #f3f4f6;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    .info-box p {
+      margin: 0.25rem 0;
+    }
+
+    /* 響應式：手機優化 */
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.5rem;
+      }
+      h3 {
+        font-size: 1.25rem;
+      }
+      .check {
+        font-size: 3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="check">✅</div>
+    <h3>設定已成功儲存！</h3>
+    <p>設備即將重啟，嘗試連線到新的 Wi-Fi 網路...</p>
+    <div class="info-box">
+      <p><strong>SSID:</strong> %SSID%</p>
+      <p><strong>MQTT IP:</strong> %MQTT%</p>
+    </div>
+  </div>
+</body>
+</html>

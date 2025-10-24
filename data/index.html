@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 配置門戶</title>
+  <style>
+    /* 全局設定 */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    /* 容器 */
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background-color: #fff;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    /* 標題 */
+    h2 {
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: #1f2937;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    /* 副標題 */
+    p.subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    /* 標籤 */
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.25rem;
+    }
+
+    /* 輸入框 */
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      color: #374151;
+      margin-bottom: 1.5rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.3);
+    }
+
+    /* 按鈕 */
+    .button {
+      width: 100%;
+      height: 3rem;
+      background: linear-gradient(to right, #2563eb, #4f46e5);
+      color: #fff;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button:hover {
+      transform: scale(1.01);
+      background: linear-gradient(to right, #1e40af, #4338ca);
+    }
+
+    p.note {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    span.current {
+      font-size: 0.75rem;
+      color: #3b82f6;
+      margin-left: 0.5rem;
+    }
+
+    /* 響應式：手機優化 */
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.5rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      input {
+        padding: 0.65rem 0.9rem;
+      }
+      .button {
+        height: 2.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📡 設備配置</h2>
+    <p class="subtitle">LU90614 MQTT 發佈器設定</p>
+    <form action="/save" method="post">
+      <div>
+        <label for="ssid">Wi-Fi SSID <span class="current">(當前: %SSID%)</span></label>
+        <input type="text" id="ssid" name="ssid" placeholder="請輸入 Wi-Fi 名稱" required>
+      </div>
+
+      <div>
+        <label for="password">Wi-Fi 密碼</label>
+        <input type="password" id="password" name="password" placeholder="請輸入 Wi-Fi 密碼" required>
+      </div>
+
+      <div>
+        <label for="mqtt">MQTT Server IP <span class="current">(當前: %MQTT%)</span></label>
+        <input type="text" id="mqtt" name="mqtt" placeholder="例如: 192.168.1.100" required>
+      </div>
+
+      <button type="submit" class="button">💾 儲存設定並重啟設備</button>
+    </form>
+    <p class="note">請務必確認 IP 地址和 Wi-Fi 密碼的正確性。</p>
+  </div>
+</body>
+</html>
