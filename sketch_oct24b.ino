@@ -1,11 +1,13 @@
 // -----------------------------------------------------------
-// LU90614 + Wi-Fi + MQTT example (ESP32, Serial2 RX16/TX17)
+// LU90614 + Wi-Fi + MQTT/WebSocket example (ESP32, Serial2 RX16/TX17)
 // Simplified and comments translated to English
 // -----------------------------------------------------------
 #include <LittleFS.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <WebServer.h>
+#include <WebSocketsServer.h>
+#include <ESPmDNS.h>
 #include <ArduinoJson.h>
 #include <time.h>
 
@@ -24,6 +26,10 @@ String GATEWAY_ID = "";
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+// Operation mode flag
+bool useWebSocketMode = false;
 
 // Configuration struct
 struct Config {
@@ -55,7 +61,8 @@ const int PACKET_SIZE = 9;
 const float MAX_VALID_TEMP = 150.0;
 
 enum MeasurementMode { BodyMode, MaterialMode };
-#define STATIC_MODE_SELECTION BodyMode
+//#define STATIC_MODE_SELECTION BodyMode
+#define STATIC_MODE_SELECTION MaterialMode
 
 // NTP
 const char* NTP_SERVER = "pool.ntp.org";
@@ -93,7 +100,11 @@ void saveConfiguration();
 void loadConfiguration();
 void handleRoot();
 void handleSave();
+void handleMonitor();
+void handleResetConfig();
 void startAPConfigPortal();
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
+void sendWebSocketData(float temp, long long timestamp);
 
 // -------- File system and config management --------
 void initFileSystem() {
@@ -188,6 +199,11 @@ void handleSave() {
 
     saveConfiguration();
 
+    // Check if WebSocket mode (MQTT IP = 0.0.0.0)
+    if (strcmp(currentConfig.mqtt_ip, "0.0.0.0") == 0) {
+      useWebSocketMode = true;
+    }
+
     File file = LittleFS.open("/success.html", "r");
     if (!file) {
       server.send(200, "text/plain", "Configuration saved. Restarting...");
@@ -221,6 +237,61 @@ void startAPConfigPortal() {
   }
 }
 
+// -------- WebSocket handler --------
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+  switch(type) {
+    case WStype_DISCONNECTED:
+      Serial.printf("[%u] Disconnected!\n", num);
+      break;
+    case WStype_CONNECTED:
+      {
+        IPAddress ip = webSocket.remoteIP(num);
+        Serial.printf("[%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1], ip[2], ip[3]);
+      }
+      break;
+    case WStype_TEXT:
+      Serial.printf("[%u] Received: %s\n", num, payload);
+      break;
+  }
+}
+
+void sendWebSocketData(float temp, long long timestamp) {
+  DynamicJsonDocument doc(256);
+  doc["temperature"] = temp;
+  doc["timestamp"] = timestamp;
+  
+  String output;
+  serializeJson(doc, output);
+  
+  webSocket.broadcastTXT(output);
+  Serial.println("WebSocket broadcast: " + output);
+}
+
+void handleMonitor() {
+  File file = LittleFS.open("/monitor.html", "r");
+  if (!file) {
+    server.send(500, "text/plain", "monitor.html not found");
+    return;
+  }
+  String html = file.readString();
+  file.close();
+  server.send(200, "text/html", html);
+}
+
+void handleResetConfig() {
+  Serial.println("Received reset config request");
+  
+  // Delete config file
+  if (LittleFS.exists(CONFIG_PATH)) {
+    LittleFS.remove(CONFIG_PATH);
+    Serial.println("Config file deleted");
+  }
+  
+  server.send(200, "text/plain", "Config reset. Restarting...");
+  delay(1000);
+  ESP.restart();
+}
+
 // -------- Setup & loop --------
 void setup() {
   Serial.begin(115200);
@@ -230,6 +301,12 @@ void setup() {
   loadConfiguration();
 
   lu90614_Serial.begin(BAUD_RATE, SERIAL_8N1, RX_PIN, TX_PIN);
+
+  // Check if WebSocket mode
+  if (strcmp(currentConfig.mqtt_ip, "0.0.0.0") == 0) {
+    useWebSocketMode = true;
+    Serial.println("WebSocket mode enabled");
+  }
 
   connectWiFi();
   initLocalTime();
@@ -244,15 +321,46 @@ void setup() {
   }
   GATEWAY_ID.toUpperCase();
 
-  mqttClient.setServer(currentConfig.mqtt_ip, MQTT_PORT);
-  connectMQTT();
+  if (useWebSocketMode) {
+    // WebSocket mode: Start mDNS and WebSocket server
+    if (MDNS.begin("esp32-temp")) {
+      Serial.println("mDNS responder started: esp32-temp.local");
+      MDNS.addService("http", "tcp", 80);
+      MDNS.addService("ws", "tcp", 81);
+    }
+    
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+    
+    server.on("/", handleMonitor);
+    server.on("/monitor", handleMonitor);
+    server.on("/reset-config", HTTP_POST, handleResetConfig);
+    server.on("/ws", []() {
+      server.send(200, "text/plain", "WebSocket endpoint at ws://esp32-temp.local:81/");
+    });
+    server.begin();
+    
+    Serial.println("WebSocket server started on port 81");
+    Serial.println("Access monitor at: http://esp32-temp.local/");
+  } else {
+    // MQTT mode
+    mqttClient.setServer(currentConfig.mqtt_ip, MQTT_PORT);
+    connectMQTT();
+  }
 
   Serial.println("Ready");
 }
 
 void loop() {
-  if (!mqttClient.connected()) connectMQTT();
-  mqttClient.loop();
+  if (useWebSocketMode) {
+    // WebSocket mode
+    webSocket.loop();
+    server.handleClient();
+  } else {
+    // MQTT mode
+    if (!mqttClient.connected()) connectMQTT();
+    mqttClient.loop();
+  }
 
   setAndMeasureTemperature(STATIC_MODE_SELECTION);
   delay(1000);
@@ -335,15 +443,17 @@ void setAndMeasureTemperature(MeasurementMode mode) {
   byte p2 = (mode == BodyMode) ? BODY_MODE_P2 : MATERIAL_MODE_P2;
   byte p3 = (mode == BodyMode) ? BODY_MODE_P3 : MATERIAL_MODE_P3;
 
-  lu90614_Serial.write(TEMP_MODE_HEADER);
-  lu90614_Serial.write(p2);
-  lu90614_Serial.write(p3);
+  // Set temperature mode (body or material)
+  lu90614_Serial.write(TEMP_MODE_HEADER);  // 0xFA
+  lu90614_Serial.write(p2);                 // 0xC5 (body) or 0xC6 (material)
+  lu90614_Serial.write(p3);                 // 0xBF (body) or 0xC0 (material)
   delay(50);
   lu90614_Serial.flush();
 
-  lu90614_Serial.write(START_MEASUREMENT);
-  lu90614_Serial.write(START_MEASUREMENT_CA);
-  lu90614_Serial.write(START_MEASUREMENT_C4);
+  // Start measurement command
+  lu90614_Serial.write(START_MEASUREMENT);     // 0xFA
+  lu90614_Serial.write(START_MEASUREMENT_CA);  // 0xCA
+  lu90614_Serial.write(START_MEASUREMENT_C4);  // 0xC4
 
   unsigned long startTime = millis();
   const unsigned long TIMEOUT = 800;
@@ -445,5 +555,12 @@ void readAndProcessTemperature(MeasurementMode requestedMode) {
   }
 
   Serial.printf("Temperature read: %.2f°C\n", temp);
-  publish_structured_json(temp, requestedMode);
+  
+  if (useWebSocketMode) {
+    // Send via WebSocket
+    sendWebSocketData(temp, getEpochMillis());
+  } else {
+    // Send via MQTT
+    publish_structured_json(temp, requestedMode);
+  }
 }

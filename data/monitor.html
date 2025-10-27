@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>溫度即時監控</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background-color: #fff;
+      padding: 2rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-sizing: border-box;
+    }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1f2937;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+    }
+
+    .status.connected {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .status.disconnected {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .temp-display {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .temp-value {
+      font-size: 4rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .temp-label {
+      font-size: 1rem;
+      opacity: 0.9;
+      margin-top: 0.5rem;
+    }
+
+    .time-display {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .data-table {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background-color: #f3f4f6;
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      position: sticky;
+      top: 0;
+    }
+
+    td {
+      padding: 0.75rem;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.875rem;
+      color: #4b5563;
+    }
+
+    .button {
+      width: 100%;
+      height: 3rem;
+      background: linear-gradient(to right, #10b981, #059669);
+      color: #fff;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .button:hover {
+      transform: scale(1.02);
+      background: linear-gradient(to right, #059669, #047857);
+    }
+
+    .button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-box {
+      background-color: #f9fafb;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 1.5rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+      }
+      .temp-value {
+        font-size: 3rem;
+      }
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🌡️ 溫度即時監控</h2>
+    <div class="status disconnected" id="status">⚠️ 連線中...</div>
+
+    <div class="temp-display">
+      <div class="temp-value" id="tempValue">--.-</div>
+      <div class="temp-label">當前溫度 (°C)</div>
+    </div>
+
+    <div class="time-display" id="timeDisplay">等待資料...</div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-value" id="maxTemp">--.-</div>
+        <div class="stat-label">最高溫度</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="minTemp">--.-</div>
+        <div class="stat-label">最低溫度</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="avgTemp">--.-</div>
+        <div class="stat-label">平均溫度</div>
+      </div>
+    </div>
+
+    <div class="data-table">
+      <table>
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>溫度 (°C)</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="2" style="text-align:center; color:#9ca3af;">尚無資料</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <button class="button" id="downloadBtn" onclick="downloadCSV()" disabled>📥 下載 CSV 檔案</button>
+    <button class="button" id="clearBtn" onclick="clearData()" style="background: linear-gradient(to right, #ef4444, #dc2626);" disabled>🗑️ 清除資料</button>
+    <button class="button" id="resetConfigBtn" onclick="resetConfig()" style="background: linear-gradient(to right, #f59e0b, #d97706);">⚙️ 清除配置並重啟</button>
+  </div>
+
+  <script>
+    let ws;
+    let dataRecords = [];
+    let reconnectTimer;
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.hostname}:81/`;
+      
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = function() {
+        console.log('WebSocket 連線成功');
+        document.getElementById('status').className = 'status connected';
+        document.getElementById('status').innerHTML = '✅ 已連線';
+        clearTimeout(reconnectTimer);
+      };
+
+      ws.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          updateDisplay(data);
+        } catch (e) {
+          console.error('資料解析錯誤:', e);
+        }
+      };
+
+      ws.onerror = function(error) {
+        console.error('WebSocket 錯誤:', error);
+      };
+
+      ws.onclose = function() {
+        console.log('WebSocket 連線關閉');
+        document.getElementById('status').className = 'status disconnected';
+        document.getElementById('status').innerHTML = '❌ 連線中斷，3秒後重連...';
+        reconnectTimer = setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    function updateDisplay(data) {
+      const temp = data.temperature;
+      const timestamp = data.timestamp;
+
+      // 更新當前溫度
+      document.getElementById('tempValue').innerText = temp.toFixed(1);
+      
+      // 更新時間
+      const date = new Date(timestamp);
+      document.getElementById('timeDisplay').innerText = 
+        `最後更新: ${date.toLocaleString('zh-TW')}`;
+
+      // 儲存記錄
+      dataRecords.push({
+        temperature: temp,
+        timestamp: timestamp,
+        timeString: date.toLocaleString('zh-TW')
+      });
+
+      // 限制最多保存 1000 筆記錄
+      if (dataRecords.length > 1000) {
+        dataRecords.shift();
+      }
+
+      // 更新統計
+      updateStats();
+
+      // 更新表格
+      updateTable();
+
+      // 啟用按鈕
+      document.getElementById('downloadBtn').disabled = false;
+      document.getElementById('clearBtn').disabled = false;
+    }
+
+    function updateStats() {
+      if (dataRecords.length === 0) return;
+
+      const temps = dataRecords.map(r => r.temperature);
+      const max = Math.max(...temps);
+      const min = Math.min(...temps);
+      const avg = temps.reduce((a, b) => a + b, 0) / temps.length;
+
+      document.getElementById('maxTemp').innerText = max.toFixed(1);
+      document.getElementById('minTemp').innerText = min.toFixed(1);
+      document.getElementById('avgTemp').innerText = avg.toFixed(1);
+    }
+
+    function updateTable() {
+      const tbody = document.getElementById('dataBody');
+      
+      // 只顯示最新 50 筆
+      const recentRecords = dataRecords.slice(-50).reverse();
+      
+      if (recentRecords.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#9ca3af;">尚無資料</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = recentRecords.map(record => 
+        `<tr>
+          <td>${record.timeString}</td>
+          <td>${record.temperature.toFixed(1)}</td>
+        </tr>`
+      ).join('');
+    }
+
+    function downloadCSV() {
+      if (dataRecords.length === 0) {
+        alert('沒有資料可下載');
+        return;
+      }
+
+      // 建立 CSV 內容
+      let csv = '\ufeff時間,溫度(°C)\n'; // BOM for UTF-8
+      dataRecords.forEach(record => {
+        csv += `${record.timeString},${record.temperature.toFixed(2)}\n`;
+      });
+
+      // 建立下載連結
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      const now = new Date();
+      const filename = `temperature_log_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function clearData() {
+      if (confirm('確定要清除所有資料嗎？')) {
+        dataRecords = [];
+        document.getElementById('maxTemp').innerText = '--.-';
+        document.getElementById('minTemp').innerText = '--.-';
+        document.getElementById('avgTemp').innerText = '--.-';
+        updateTable();
+        document.getElementById('downloadBtn').disabled = true;
+        document.getElementById('clearBtn').disabled = true;
+      }
+    }
+
+    function resetConfig() {
+      if (confirm('確定要清除配置設定嗎？\n\n裝置將重啟並進入配置模式，您需要重新設定 Wi-Fi 和識別碼。')) {
+        fetch('/reset-config', {
+          method: 'POST'
+        })
+        .then(response => response.text())
+        .then(data => {
+          alert('配置已清除，裝置即將重啟...');
+        })
+        .catch(error => {
+          alert('清除配置失敗: ' + error);
+        });
+      }
+    }
+
+    // 頁面載入時連接 WebSocket
+    window.addEventListener('load', connectWebSocket);
+  </script>
+</body>
+</html>
