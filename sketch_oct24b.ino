@@ -35,7 +35,7 @@ bool useWebSocketMode = false;
 struct Config {
   char ssid[33];
   char password[65];
-  char mqtt_ip[16];
+  char mqtt_ip[128];  // Increased size to support domain names
 };
 Config currentConfig;
 
@@ -116,7 +116,7 @@ void initFileSystem() {
 }
 
 void saveConfiguration() {
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<512> doc;  // Increased size for domain names
   doc["ssid"] = currentConfig.ssid;
   doc["password"] = currentConfig.password;
   doc["mqtt_ip"] = currentConfig.mqtt_ip;
@@ -153,7 +153,7 @@ void loadConfiguration() {
     return;
   }
 
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<512> doc;  // Increased size for domain names
   DeserializationError error = deserializeJson(doc, file);
   file.close();
   if (error) {
