@@ -1,53 +1,273 @@
-# IR_temperature — Quick Start
+# LU90614 溫度監控系統 - 使用手冊
 
-A tiny, beginner-friendly Arduino project to read non-contact temperature from an IR sensor and print it (optionally serve a simple web UI on ESP boards).
+## 📖 系統簡介
 
-Quick highlights
-- Read object & ambient temps from an IR sensor (e.g. MLX90614 / MLX90632)
-- Outputs to Serial (and an optional simple HTML UI if using an ESP)
-- Small, easy-to-follow Arduino sketch meant for learning and hacking
+這是一個基於 ESP32 的紅外線溫度監控系統，使用 LU90614 溫度感測器，支援兩種運作模式：
 
-What you need
-- Arduino Uno/Nano or ESP board (specify which you use)
-- IR temp sensor module (MLX90614, MLX90632, or similar)
-- Jumper wires, USB cable, breadboard (optional)
+- **MQTT 模式**：將溫度數據發送到 MQTT 伺服器
+- **WebSocket 模式**：透過網頁即時監控溫度並下載 CSV 數據
 
-Wiring (I2C common)
-- VCC -> 3.3V or 5V (check module)
-- GND -> GND
-- SDA -> A4 (Uno/Nano) or board's SDA
-- SCL -> A5 (Uno/Nano) or board's SCL
+---
 
-Software
-- Arduino IDE or PlatformIO
-- Wire library (builtin)
-- Sensor library (install via Library Manager; check the sketch includes)
+## 🚀 快速開始
 
-Quick install & run
-1. Open the sketch in Arduino IDE.
-2. Install the library mentioned in the top of the .ino file.
-3. Select board & port, then Upload.
-4. Open Serial Monitor at the baud rate in the sketch (commonly 9600 or 115200).
+### 首次使用設定
 
-Usage
-- Power it, point sensor at object, read values in Serial Monitor.
-- For ESP web UI: connect to board IP in browser (if sketch serves pages).
+1. **連接裝置電源**
+   
+   - 將 ESP32 裝置接上電源
+   - 等待約 10-15 秒讓裝置啟動
 
-Calibration & tips
-- IR measures surface temp. Emissivity & distance matter.
-- For better accuracy: use known-emissivity targets, keep distance fixed, compare with a thermometer and apply a software offset if needed.
+2. **連接配置 Wi-Fi**
+   
+   - 使用手機或電腦搜尋 Wi-Fi 網路
+     ![](C:\Users\Jemmy\AppData\Roaming\marktext\images\2025-10-29-21-31-29-image.png)
+   - 找到並連接 `ESP32_ConfigPortal`
+   - 密碼：`00000000`
 
-Troubleshooting (fast)
-- No data: check wiring, power level, and I2C address (run an I2C scanner).
-- Wrong values: check emissivity, reflections, or sensor config.
+3. **開啟配置頁面**
+   
+   - 連線成功後，瀏覽器會自動開啟配置頁面
+   - 如果沒有自動開啟，請手動訪問：`http://192.168.4.1`
+     
+     <img src="file:///C:/Users/Jemmy/AppData/Roaming/marktext/images/2025-10-29-21-32-42-image.png" title="" alt="" width="269">
 
-Contributing
-- PRs welcome. Fork → branch → PR. Keep commits focused and describe changes.
+4. **填寫設定資訊**
+   
+   - **Wi-Fi SSID**：輸入您的 Wi-Fi 名稱
+   - **Wi-Fi 密碼**：輸入您的 Wi-Fi 密碼
+   - **MQTT Server IP / Domain**：
+     - 📡 MQTT 模式：輸入 MQTT 伺服器的 IP（例如：`192.168.1.100`）或域名（例如：`mqtt.example.com`）**連緯創用的**
+     - 🌐 WebSocket 模式：輸入 `0.0.0.0` **(For Step 1 Test 讀值) (No MQTT)** 
 
-License
-- Add LICENSE file (e.g., MIT) and note it here.
+5. **儲存並重啟**
+   
+   - 點擊「💾 儲存設定並重啟設備」
+   - 裝置會自動重啟並連接到您的 Wi-Fi
 
-Maintainer
-- jemmy1794
+---
 
-Want this updated with exact wiring, libs and Serial example output for your specific sensor + board? Tell me the sensor model and board and I’ll patch the README.
+## 🌐 WebSocket 模式使用 (For Step 1 Test ) (No MQTT)
+
+### 訪問監控頁面 可用電腦(同網域)查看並下載CSV
+
+裝置連接到 Wi-Fi 後，有兩種方式訪問：
+
+**方式 1：使用 mDNS（推薦）** 
+
+```
+http://esp32-temp.local/
+```
+
+**方式 2：使用 IP 地址**
+
+- 在路由器管理頁面查找裝置 IP
+- 或透過序列埠監控查看
+- 訪問：`http://[裝置IP]/`
+
+### 監控介面功能
+
+<img src="file:///C:/Users/Jemmy/AppData/Roaming/marktext/images/2025-10-29-21-29-30-image.png" title="" alt="" width="308">
+
+#### 📊 即時溫度顯示
+
+- **當前溫度**：大字顯示最新測量溫度
+- **連線狀態**：顯示 WebSocket 連線狀態
+- **最後更新時間**：顯示最後一次測量時間
+
+#### 📈 統計資訊
+
+- **最高溫度**：記錄期間的最高溫度
+- **最低溫度**：記錄期間的最低溫度
+- **平均溫度**：所有記錄的平均值
+
+#### 📋 資料表格
+
+- 顯示最近 50 筆溫度記錄
+- 自動滾動顯示
+- 包含時間戳記和溫度數值
+
+#### 🛠️ 功能按鈕
+
+**📥 下載 CSV 檔案**
+
+- 將所有溫度記錄（最多 1000 筆）下載為 CSV 檔案
+- 檔案命名格式：`temperature_log_YYYYMMDD_HHMM.csv`
+- 可用 Excel 或其他試算表軟體開啟
+
+**🗑️ 清除資料**
+
+- 清除瀏覽器中儲存的所有溫度記錄
+- 不影響裝置運作
+- 確認後無法復原
+
+**⚙️ 清除配置並重啟**
+
+- 刪除裝置的所有設定
+- 重啟後會自動進入配置模式
+- 需要重新設定 Wi-Fi 和 MQTT 設定
+
+---
+
+## 📡 MQTT 模式使用
+
+### MQTT 設定
+
+1. 在配置頁面輸入 MQTT 伺服器資訊：
+   
+   - IP 地址（例如：`192.168.1.100`）
+   - 或域名（例如：`mqtt.example.com`）
+
+2. MQTT 連線資訊：
+   
+   - **端口**：1883
+   - **Client ID**：`ESP32_LU90614`
+   - **Topic**：`yofa-temp/[裝置MAC地址]`
+
+### 資料格式
+
+裝置會以 JSON 格式發送溫度數據：
+
+```json
+{
+  "format": "string",
+  "topic": "yofa-temp/A1B2C3D4E5F6",
+  "timestamp": 1698409200000,
+  "payload": "$GPRP,A1B2C3D4E5F6,A1B2C3D4E5F6,-65,0201060302...\r\n",
+  "qos": 0
+}
+```
+
+---
+
+## 🔧 測量模式
+
+系統支援兩種測量模式：
+
+### 人體模式 (Body Mode)
+
+- 測量範圍：32-42°C
+- 適用於人體體溫測量
+- 較高精度
+
+### 物體模式 (Material Mode) - **預設**
+
+- 測量範圍：-70°C 至 380°C
+- 適用於一般物體溫度測量
+- 可測量較低溫度
+
+> 💡 **提示**：目前系統預設使用**物體模式**，可測量 32°C 以下的溫度
+
+---
+
+## ❓ 常見問題
+
+### 無法連接配置 Wi-Fi？
+
+- 確認裝置已通電並等待 15 秒
+- 重新搜尋 Wi-Fi 網路
+- 確認輸入正確的密碼 `00000000`
+
+### 配置後無法連接 Wi-Fi？
+
+- 檢查 Wi-Fi 名稱和密碼是否正確
+- 確認 Wi-Fi 是 2.4GHz（ESP32 不支援 5GHz）
+- 重新配置：在 MQTT IP 欄位輸入 `0.0.0.0` 並重啟
+
+### 無法訪問 esp32-temp.local？
+
+- 確認裝置和電腦在同一個 Wi-Fi 網路
+- 嘗試使用 IP 地址訪問
+- Windows 用戶可能需要安裝 Bonjour 服務
+
+### WebSocket 連線中斷？
+
+- 檢查網路連線是否穩定
+- 系統會每 3 秒自動重連
+- 重新整理頁面
+
+### 溫度讀取異常？
+
+- 確認感測器正常連接
+- 檢查測量距離（建議 5-10cm）
+- 確認目標物體在測量範圍內
+- 查看序列埠監控器的錯誤訊息
+
+### CSV 檔案無法開啟？
+
+- 檔案採用 UTF-8 編碼，Excel 可正常開啟
+- 如遇到亂碼，請使用 Excel 的「資料 > 從文字/CSV」功能匯入
+
+---
+
+## 📊 CSV 檔案格式
+
+下載的 CSV 檔案包含以下欄位：
+
+```csv
+時間,溫度(°C)
+2025/10/29 下午2:30:15,25.30
+2025/10/29 下午2:30:16,25.35
+2025/10/29 下午2:30:17,25.28
+...
+```
+
+- **時間**：測量時間（本地時間）
+- **溫度**：攝氏溫度，精確到小數點後兩位
+
+---
+
+## 🔒 安全提示
+
+1. **Wi-Fi 安全**
+   
+   - 配置 Wi-Fi（ESP32_ConfigPortal）密碼為 `00000000`
+   - 建議配置完成後儘快連接到您的 Wi-Fi
+
+2. **網路安全**
+   
+   - WebSocket 監控頁面無密碼保護
+   - 建議在受信任的內部網路使用
+   - 如需公開訪問，請自行添加認證機制
+
+3. **資料隱私**
+   
+   - 溫度數據僅儲存在瀏覽器本地（最多 1000 筆）
+   - 不會上傳到外部伺服器
+   - MQTT 模式下數據會發送到您指定的 MQTT 伺服器
+
+---
+
+## 📞 技術規格
+
+- **微控制器**：ESP32
+- **感測器**：LU90614 紅外線溫度感測器
+- **通訊協議**：UART (9600 baud)
+- **Wi-Fi**：802.11 b/g/n (2.4GHz)
+- **Web 伺服器**：Port 80
+- **WebSocket 伺服器**：Port 81
+- **MQTT**：Port 1883
+- **測量頻率**：每秒 1 次
+- **資料儲存**：最多 1000 筆記錄
+
+---
+
+## 🆘 取得支援
+
+如遇到其他問題，請：
+
+1. 檢查序列埠監控器（115200 baud）的錯誤訊息
+2. 記錄問題發生的步驟和環境
+3. 聯繫技術支援團隊
+
+---
+
+## 📝 版本資訊
+
+- **版本**：1.0.0
+- **最後更新**：2025-10-29
+- **相容性**：ESP32 開發板
+
+---
+
+**祝您使用愉快！ 🎉**
